@@ -218,8 +218,36 @@ async def mcp_endpoint(request: MCPRequest):
             result={
                 "tools": [
                     {
+                        "name": "search",
+                        "description": "Busca alimentos na base de dados nutricional e retorna lista de resultados relevantes",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "query": {
+                                    "type": "string",
+                                    "description": "Consulta de busca por alimento (ex: 'banana', 'tapioca com queijo', 'pão francês')"
+                                }
+                            },
+                            "required": ["query"]
+                        }
+                    },
+                    {
+                        "name": "fetch",
+                        "description": "Recupera análise nutricional completa de um alimento específico por ID",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "description": "ID único do alimento para análise detalhada"
+                                }
+                            },
+                            "required": ["id"]
+                        }
+                    },
+                    {
                         "name": "analyze_food",
-                        "description": "Analisa alimento e retorna estimativa nutricional completa com calorias, macronutrientes e insights personalizados",
+                        "description": "Analisa alimento diretamente e retorna estimativa nutricional completa",
                         "inputSchema": {
                             "type": "object",
                             "properties": {
@@ -246,7 +274,180 @@ async def mcp_endpoint(request: MCPRequest):
         
         print(f"🛠️ ChatGPT chamando tool: {tool_name} com argumentos: {arguments}")
         
-        if tool_name == "analyze_food":
+        if tool_name == "search":
+            try:
+                query = arguments.get("query", "")
+                print(f"🔍 BUSCA: {query}")
+                
+                # Gera resultados de busca baseados na query
+                search_results = []
+                
+                # Simula diferentes tipos de alimentos baseados na query
+                food_suggestions = []
+                query_lower = query.lower()
+                
+                if "banana" in query_lower:
+                    food_suggestions = [
+                        ("banana-prata", "Banana Prata Média", "Banana prata média (86g)"),
+                        ("banana-nanica", "Banana Nanica", "Banana nanica pequena (65g)"), 
+                        ("banana-da-terra", "Banana da Terra", "Banana da terra cozida (100g)")
+                    ]
+                elif "tapioca" in query_lower:
+                    food_suggestions = [
+                        ("tapioca-queijo", "Tapioca com Queijo", "Tapioca 2 colheres com queijo coalho"),
+                        ("tapioca-simples", "Tapioca Simples", "Tapioca simples 2 colheres"),
+                        ("tapioca-coco", "Tapioca com Coco", "Tapioca com coco ralado")
+                    ]
+                elif "pao" in query_lower or "pão" in query_lower:
+                    food_suggestions = [
+                        ("pao-frances", "Pão Francês", "Pão francês com manteiga"),
+                        ("pao-integral", "Pão Integral", "Pão integral 2 fatias"),
+                        ("pao-doce", "Pão Doce", "Pão doce pequeno")
+                    ]
+                else:
+                    # Resultados genéricos para outras consultas
+                    food_suggestions = [
+                        (f"alimento-{hash(query) % 1000}", f"Resultado para '{query}'", query),
+                        (f"similar-{hash(query) % 100}", f"Alimento similar a '{query}'", f"{query} (variação)")
+                    ]
+                
+                for food_id, title, description in food_suggestions:
+                    search_results.append({
+                        "id": food_id,
+                        "title": title,
+                        "url": f"https://nutriai-mcp-server.onrender.com/food/{food_id}"
+                    })
+                
+                results_json = json.dumps({"results": search_results}, ensure_ascii=False)
+                
+                return MCPResponse(
+                    id=request.id,
+                    result={
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": results_json
+                            }
+                        ]
+                    }
+                )
+                
+            except Exception as e:
+                print(f"❌ ERRO na busca: {e}")
+                return MCPResponse(
+                    id=request.id,
+                    error={
+                        "code": -32603,
+                        "message": f"Erro na busca: {str(e)}"
+                    }
+                )
+        
+        elif tool_name == "fetch":
+            try:
+                food_id = arguments.get("id", "")
+                print(f"📄 FETCH: {food_id}")
+                
+                # Mapeia IDs para descrições de alimentos
+                food_map = {
+                    "banana-prata": "banana prata média de 86g",
+                    "banana-nanica": "banana nanica pequena de 65g", 
+                    "banana-da-terra": "banana da terra cozida de 100g",
+                    "tapioca-queijo": "tapioca 2 colheres com queijo coalho de 120g",
+                    "tapioca-simples": "tapioca simples 2 colheres de 80g",
+                    "tapioca-coco": "tapioca com coco ralado de 100g",
+                    "pao-frances": "pão francês com manteiga de 50g",
+                    "pao-integral": "pão integral 2 fatias de 60g",
+                    "pao-doce": "pão doce pequeno de 40g"
+                }
+                
+                food_description = food_map.get(food_id, food_id.replace("-", " "))
+                portion_grams = 100.0  # padrão
+                
+                # Extrai porção do mapeamento se disponível
+                if food_id in food_map:
+                    desc = food_map[food_id]
+                    import re
+                    weight_match = re.search(r'(\d+)g', desc)
+                    if weight_match:
+                        portion_grams = float(weight_match.group(1))
+                        food_description = desc.replace(f' de {int(portion_grams)}g', '')
+                
+                print(f"📊 ANALISANDO: {food_description} ({portion_grams}g)")
+                
+                # Usa sua função de análise existente
+                user_prompt = (
+                    f"Alimento: {food_description}\n"
+                    f"Porção (g): {portion_grams}\n"
+                    "Gere os campos solicitados, mantendo números simples."
+                )
+                
+                resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    temperature=0.2,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                
+                content = resp.choices[0].message.content
+                parsed_response = json.loads(content)
+                result = AnalyzeFoodOutput(**parsed_response)
+                
+                # Formata como documento completo
+                document = {
+                    "id": food_id,
+                    "title": f"Análise Nutricional: {food_description.title()}",
+                    "text": f"""
+ANÁLISE NUTRICIONAL COMPLETA
+{food_description.upper()} - {portion_grams}g
+
+INFORMAÇÕES NUTRICIONAIS:
+{chr(10).join([f"• {n.name}: {n.portion:.1f} (porção) | {n.per100g:.1f} (por 100g)" for n in result.nutrients])}
+
+INSIGHTS:
+{chr(10).join([f"• {insight}" for insight in result.insights])}
+
+RECOMENDAÇÃO:
+{result.advice}
+
+IMPORTANTE:
+{result.disclaimer}
+""",
+                    "url": f"https://nutriai-mcp-server.onrender.com/food/{food_id}",
+                    "metadata": {
+                        "portion_grams": portion_grams,
+                        "tokens_used": resp.usage.total_tokens,
+                        "generated_at": time.time()
+                    }
+                }
+                
+                document_json = json.dumps(document, ensure_ascii=False)
+                
+                return MCPResponse(
+                    id=request.id,
+                    result={
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": document_json
+                            }
+                        ]
+                    }
+                )
+                
+            except Exception as e:
+                print(f"❌ ERRO no fetch: {e}")
+                return MCPResponse(
+                    id=request.id,
+                    error={
+                        "code": -32603,
+                        "message": f"Erro no fetch: {str(e)}"
+                    }
+                )
+        
+        elif tool_name == "analyze_food":
             try:
                 # Usa sua função existente de análise!
                 payload = AnalyzeFoodInput(
