@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnalyzeFoodInput",
+  "type": "object",
+  "properties": {
+    "food_description": {
+      "type": "string",
+      "description": "Descrição do alimento e quantidade, ex.: '2 colheres de tapioca com queijo'."
+    },
+    "portion_grams": {
+      "type": "number",
+      "description": "Peso aproximado em gramas, se conhecido."
+    }
+  },
+  "required": ["food_description"]
+}

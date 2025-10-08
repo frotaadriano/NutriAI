@@ -1,0 +1,4 @@
+node_modules/
+.env
+app-ui/package-lock.json
+mcp-server/__pycache__/main.cpython-313.pyc
