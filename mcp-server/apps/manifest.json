@@ -1,0 +1,41 @@
+{
+  "name": "NutriAI",
+  "description": "Assistente de análise nutricional que estima calorias, macronutrientes e fornece insights personalizados sobre alimentos.",
+  "version": "1.0.0",
+  "categories": ["health", "nutrition", "wellness"],
+  "author": "Adriano Frota",
+  "website": "https://github.com/frotaadriano/NutriAI",
+  "server_url": "https://your-deployed-server.com",
+  "tools": [
+    {
+      "name": "analyze_food",
+      "description": "Analisa qualquer descrição de alimento e retorna estimativa nutricional detalhada com calorias, macronutrientes, insights e dicas personalizadas.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "food_description": {
+            "type": "string",
+            "description": "Descrição detalhada do alimento, incluindo preparo e quantidade (ex: 'tapioca 2 colheres com queijo', 'banana prata média', 'pão francês com manteiga')"
+          },
+          "portion_grams": {
+            "type": "number",
+            "description": "Peso da porção em gramas (opcional). Se não informado, usa 100g como padrão.",
+            "minimum": 1,
+            "maximum": 2000,
+            "default": 100.0
+          }
+        },
+        "required": ["food_description"]
+      }
+    }
+  ],
+  "discovery_prompts": [
+    "Analise esse alimento para mim",
+    "Quantas calorias tem essa comida?",
+    "Me dê informações nutricionais sobre...",
+    "Qual o valor nutricional de...",
+    "É saudável comer...?"
+  ],
+  "privacy_policy": "O NutriAI não coleta informações pessoais. Todas as análises são processadas em tempo real via API OpenAI.",
+  "terms_of_service": "Ferramenta educativa. Não substitui orientação médica ou nutricional profissional."
+}

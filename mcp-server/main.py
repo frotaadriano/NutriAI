@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -103,3 +103,61 @@ def analyze(payload: AnalyzeFoodInput):
     except Exception as e:
         print(f"\n❌ ERRO DE VALIDAÇÃO: {e}")
         raise
+
+# Endpoint para Apps SDK - Tool MCP
+@app.post("/tools/analyze_food")
+async def analyze_food_tool(request: Request):
+    """Tool endpoint para integração com ChatGPT Apps SDK"""
+    data = await request.json()
+    print(f"\n🛠️ TOOL CHAMADA pelo Apps SDK: {data}")
+    
+    # Converte dados da tool para formato da função
+    payload = AnalyzeFoodInput(
+        food_description=data.get("food_description", ""),
+        portion_grams=data.get("portion_grams")
+    )
+    
+    # Chama a função de análise existente
+    result = analyze(payload)
+    return result.dict()
+
+# Endpoint de metadata para Apps SDK
+@app.get("/tools/metadata")
+def get_tools_metadata():
+    """Metadata das tools para o Apps SDK descobrir"""
+    return {
+        "tools": [
+            {
+                "name": "analyze_food",
+                "description": "Analisa alimento e retorna estimativa nutricional completa com calorias, macronutrientes e insights personalizados.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "food_description": {
+                            "type": "string",
+                            "description": "Descrição do alimento (ex: 'tapioca 2 colheres com queijo')"
+                        },
+                        "portion_grams": {
+                            "type": "number",
+                            "description": "Porção em gramas (opcional, padrão: 100g)",
+                            "default": 100.0
+                        }
+                    },
+                    "required": ["food_description"]
+                },
+                "examples": [
+                    {
+                        "food_description": "tapioca 2 colheres com queijo",
+                        "portion_grams": 120
+                    },
+                    {
+                        "food_description": "banana prata média",
+                        "portion_grams": 86
+                    },
+                    {
+                        "food_description": "pão francês com manteiga"
+                    }
+                ]
+            }
+        ]
+    }
