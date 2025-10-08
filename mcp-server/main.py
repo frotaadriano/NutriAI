@@ -186,6 +186,26 @@ def mcp_info():
         "health_endpoint": "/health"
     }
 
+# Endpoint de configuração do Apps SDK (o que o ChatGPT procura)
+@app.get("/.well-known/openai_hosted_app")
+def openai_hosted_app():
+    """Configuração para o ChatGPT Apps SDK"""
+    return {
+        "name_for_model": "nutriai",
+        "name_for_human": "NutriAI - Análise Nutricional",
+        "description_for_model": "Analisa alimentos e fornece estimativas nutricionais detalhadas incluindo calorias, macronutrientes, insights e dicas personalizadas. Use quando o usuário perguntar sobre informações nutricionais de alimentos.",
+        "description_for_human": "Assistente que analisa qualquer alimento e fornece informações nutricionais completas.",
+        "auth": {
+            "type": "none"
+        },
+        "api": {
+            "type": "openapi",
+            "url": "https://nutriai-mcp-server.onrender.com/openapi.json"
+        },
+        "contact_email": "contato@exemplo.com",
+        "privacy_policy_url": "https://github.com/frotaadriano/NutriAI/blob/main/README.md"
+    }
+
 # Endpoint de metadata para Apps SDK
 @app.get("/tools/metadata")
 def get_tools_metadata():
@@ -199,7 +219,7 @@ def get_tools_metadata():
                     "type": "object",
                     "properties": {
                         "food_description": {
-                            "type": "string",
+                            "type": "string", 
                             "description": "Descrição do alimento (ex: 'tapioca 2 colheres com queijo')"
                         },
                         "portion_grams": {
@@ -216,7 +236,7 @@ def get_tools_metadata():
                         "portion_grams": 120
                     },
                     {
-                        "food_description": "banana prata média",
+                        "food_description": "banana prata média", 
                         "portion_grams": 86
                     },
                     {
@@ -225,4 +245,21 @@ def get_tools_metadata():
                 ]
             }
         ]
+    }
+
+# Endpoint raiz para verificação
+@app.get("/")
+def root():
+    """Endpoint raiz com informações básicas"""
+    return {
+        "app": "NutriAI MCP Server",
+        "status": "online",
+        "version": "1.0.0",
+        "endpoints": {
+            "health": "/health",
+            "mcp": "/mcp", 
+            "tools_metadata": "/tools/metadata",
+            "analyze_food": "/tools/analyze_food",
+            "apps_config": "/.well-known/openai_hosted_app"
+        }
     }
