@@ -188,18 +188,19 @@ def mcp_info():
 
 # Endpoint de configuração do Apps SDK (o que o ChatGPT procura)
 @app.get("/.well-known/openai_hosted_app")
+@app.get("/openai_hosted_app")  # Rota alternativa
 def openai_hosted_app():
     """Configuração para o ChatGPT Apps SDK"""
     return {
         "name_for_model": "nutriai",
-        "name_for_human": "NutriAI - Análise Nutricional",
+        "name_for_human": "NutriAI - Análise Nutricional", 
         "description_for_model": "Analisa alimentos e fornece estimativas nutricionais detalhadas incluindo calorias, macronutrientes, insights e dicas personalizadas. Use quando o usuário perguntar sobre informações nutricionais de alimentos.",
         "description_for_human": "Assistente que analisa qualquer alimento e fornece informações nutricionais completas.",
         "auth": {
             "type": "none"
         },
         "api": {
-            "type": "openapi",
+            "type": "openapi", 
             "url": "https://nutriai-mcp-server.onrender.com/openapi.json"
         },
         "contact_email": "contato@exemplo.com",
