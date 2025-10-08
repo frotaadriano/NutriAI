@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List, Optional
 import os, json, time
@@ -40,6 +41,12 @@ app = FastAPI(title="NutriAI MCP Server")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+# Servir arquivos estáticos para .well-known
+try:
+    app.mount("/.well-known", StaticFiles(directory=".well-known"), name="well-known")
+except:
+    print("⚠️ Diretório .well-known não encontrado, mas continuando...")
 
 print(f"🚀 NutriAI MCP Server inicializado com rate limiting!")
 
@@ -165,6 +172,18 @@ def health_check():
         "timestamp": time.time(),
         "rate_limits": "5/min para tools, 10/min para análises",
         "auth": "API key opcional" if API_KEYS else "público"
+    }
+
+# Endpoint MCP principal (esperado pelo ChatGPT)
+@app.get("/mcp")
+def mcp_info():
+    """Endpoint principal do MCP Server para o ChatGPT Apps SDK"""
+    return {
+        "server": "NutriAI MCP Server",
+        "version": "1.0.0",
+        "description": "Assistente de análise nutricional",
+        "tools_endpoint": "/tools/metadata",
+        "health_endpoint": "/health"
     }
 
 # Endpoint de metadata para Apps SDK

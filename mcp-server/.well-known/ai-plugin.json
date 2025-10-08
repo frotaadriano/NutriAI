@@ -1,0 +1,17 @@
+{
+  "openai_schema_version": "1.0.0",
+  "name_for_model": "NutriAI",
+  "name_for_human": "NutriAI - Análise Nutricional",
+  "description_for_model": "Analisa alimentos e fornece estimativas nutricionais detalhadas com calorias, macronutrientes e dicas personalizadas.",
+  "description_for_human": "Assistente que analisa qualquer alimento e fornece informações nutricionais completas.",
+  "auth": {
+    "type": "none"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://nutriai-mcp-server.onrender.com/openapi.json"
+  },
+  "logo_url": "https://nutriai-mcp-server.onrender.com/logo.png",
+  "contact_email": "adriano@exemplo.com",
+  "legal_info_url": "https://github.com/frotaadriano/NutriAI/blob/main/docs/privacy.md"
+}
