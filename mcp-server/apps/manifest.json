@@ -5,7 +5,7 @@
   "categories": ["health", "nutrition", "wellness"],
   "author": "Adriano Frota",
   "website": "https://github.com/frotaadriano/NutriAI",
-  "server_url": "https://your-deployed-server.com",
+  "server_url": "https://nutriai-mcp-server.onrender.com",
   "tools": [
     {
       "name": "analyze_food",
