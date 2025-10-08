@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Union
 import os, json, time
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -74,6 +74,19 @@ class AnalyzeFoodOutput(BaseModel):
     advice: str
     disclaimer: str
 
+# Classes para protocolo MCP (Model Context Protocol)
+class MCPRequest(BaseModel):
+    jsonrpc: str = "2.0"
+    id: Union[str, int]
+    method: str
+    params: Dict[str, Any] = {}
+
+class MCPResponse(BaseModel):
+    jsonrpc: str = "2.0"
+    id: Union[str, int]
+    result: Dict[str, Any] = None
+    error: Dict[str, Any] = None
+
 SYSTEM_PROMPT = """Você é um assistente de nutrição educativo.
 Retorne SEMPRE JSON válido com:
 {
@@ -107,8 +120,8 @@ def analyze(request: Request, payload: AnalyzeFoodInput):
     print(f"\n🤖 ENVIANDO PARA OpenAI...")
 
     resp = client.chat.completions.create(
-        model="gpt-4o-mini",
-        temperature=0.2,
+        model="gpt-5-nano-2025-08-07",
+        temperature=1,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt}
@@ -174,16 +187,166 @@ def health_check():
         "auth": "API key opcional" if API_KEYS else "público"
     }
 
-# Endpoint MCP principal (esperado pelo ChatGPT)
+# Endpoint MCP protocolo JSON-RPC (esperado pelo ChatGPT Apps SDK)
+@app.post("/mcp")
+async def mcp_endpoint(request: MCPRequest):
+    """Endpoint MCP compatível com ChatGPT Apps SDK usando protocolo JSON-RPC 2.0"""
+    print(f"\n🔌 MCP REQUEST: {request.method} (id: {request.id})")
+    
+    if request.method == "initialize":
+        print("🚀 ChatGPT solicitando inicialização do MCP...")
+        return MCPResponse(
+            id=request.id,
+            result={
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {
+                        "listChanged": True
+                    }
+                },
+                "serverInfo": {
+                    "name": "NutriAI",
+                    "version": "1.0.0"
+                }
+            }
+        )
+    
+    elif request.method == "tools/list":
+        print("📋 ChatGPT solicitando lista de tools...")
+        return MCPResponse(
+            id=request.id,
+            result={
+                "tools": [
+                    {
+                        "name": "analyze_food",
+                        "description": "Analisa alimento e retorna estimativa nutricional completa com calorias, macronutrientes e insights personalizados",
+                        "inputSchema": {
+                            "type": "object",
+                            "properties": {
+                                "food_description": {
+                                    "type": "string",
+                                    "description": "Descrição do alimento (ex: 'tapioca 2 colheres com queijo', 'banana prata média')"
+                                },
+                                "portion_grams": {
+                                    "type": "number", 
+                                    "description": "Porção em gramas (opcional, padrão: 100g)",
+                                    "default": 100.0
+                                }
+                            },
+                            "required": ["food_description"]
+                        }
+                    }
+                ]
+            }
+        )
+    
+    elif request.method == "tools/call":
+        tool_name = request.params.get("name")
+        arguments = request.params.get("arguments", {})
+        
+        print(f"🛠️ ChatGPT chamando tool: {tool_name} com argumentos: {arguments}")
+        
+        if tool_name == "analyze_food":
+            try:
+                # Usa sua função existente de análise!
+                payload = AnalyzeFoodInput(
+                    food_description=arguments.get("food_description", ""),
+                    portion_grams=arguments.get("portion_grams")
+                )
+                
+                # Chama sua função analyze() existente sem o request (problema do rate limiter)
+                print(f"\n🍎 ANÁLISE MCP: {payload.food_description}")
+                
+                portion = payload.portion_grams if (payload.portion_grams or 0) > 0 else 100.0
+                user_prompt = (
+                    f"Alimento: {payload.food_description}\n"
+                    f"Porção (g): {portion}\n"
+                    "Gere os campos solicitados, mantendo números simples."
+                )
+                
+                print(f"🤖 ENVIANDO PARA OpenAI via MCP...")
+                resp = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    temperature=0.2,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    response_format={"type": "json_object"}
+                )
+                
+                print(f"📊 TOKENS (MCP): {resp.usage.total_tokens}")
+                content = resp.choices[0].message.content
+                parsed_response = json.loads(content)
+                result = AnalyzeFoodOutput(**parsed_response)
+                
+                # Formata resposta para o ChatGPT
+                formatted_response = f"""
+🥗 **Análise Nutricional: {payload.food_description}**
+📏 **Porção**: {portion}g
+
+🔢 **Informações Nutricionais**:
+"""
+                for nutrient in result.nutrients:
+                    formatted_response += f"• **{nutrient.name}**: {nutrient.portion:.1f} (por {portion}g) | {nutrient.per100g:.1f} (por 100g)\n"
+                
+                formatted_response += f"\n💡 **Insights**:\n"
+                for insight in result.insights:
+                    formatted_response += f"• {insight}\n"
+                
+                formatted_response += f"\n💬 **Dica**: {result.advice}\n"
+                formatted_response += f"\n⚠️ {result.disclaimer}"
+                
+                return MCPResponse(
+                    id=request.id,
+                    result={
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": formatted_response
+                            }
+                        ]
+                    }
+                )
+                
+            except Exception as e:
+                print(f"❌ ERRO na análise MCP: {e}")
+                return MCPResponse(
+                    id=request.id,
+                    error={
+                        "code": -32603,
+                        "message": f"Erro interno: {str(e)}"
+                    }
+                )
+        
+        else:
+            return MCPResponse(
+                id=request.id,
+                error={
+                    "code": -32601,
+                    "message": f"Tool não encontrada: {tool_name}"
+                }
+            )
+    
+    else:
+        return MCPResponse(
+            id=request.id,
+            error={
+                "code": -32601,
+                "message": f"Método não suportado: {request.method}"
+            }
+        )
+
+# Endpoint MCP info (GET para debug)
 @app.get("/mcp")
 def mcp_info():
-    """Endpoint principal do MCP Server para o ChatGPT Apps SDK"""
+    """Informações do servidor MCP (para debug)"""
     return {
         "server": "NutriAI MCP Server",
-        "version": "1.0.0",
+        "version": "1.0.0", 
         "description": "Assistente de análise nutricional",
-        "tools_endpoint": "/tools/metadata",
-        "health_endpoint": "/health"
+        "protocol": "JSON-RPC 2.0",
+        "note": "Use POST para chamadas MCP reais"
     }
 
 # Endpoint de configuração do Apps SDK (o que o ChatGPT procura)

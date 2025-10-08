@@ -1,7 +1,48 @@
 # 🥗 NutriAI  
-**App experimental de análise nutricional com OpenAI Apps SDK**
+**App experimental de análise nutricional com OpenAI Apps SDK**---
 
-[![OpenAI Apps SDK](https://img.shields.io/badge/OpenAI-Apps%20SDK-412991)](https://developers.openai.com/apps-sdk)  
+## 🤖 **Integração com ChatGPT Apps SDK**
+
+O NutriAI implementa o **protocolo MCP (Model Context Protocol)** e está pronto para ser usado como um conector personalizado no ChatGPT!
+
+### **Como conectar ao ChatGPT:**
+
+1. **Acesse:** [ChatGPT Settings → Connectors](https://chatgpt.com/#settings/Connectors)
+2. **Clique em:** "New Connector" 
+3. **Configure:**
+   - **Name:** `NutriAI`
+   - **Description:** `Analisa alimentos descritos em texto e retorna tabela nutricional completa`
+   - **MCP Server URL:** `https://nutriai-mcp-server.onrender.com`
+   - **Authentication:** `No authentication`
+4. **Marque:** "I trust this application" ✓
+5. **Clique:** "Create"
+
+### **Como usar no ChatGPT:**
+Após conectar, você pode usar comandos como:
+- *"Analise uma banana prata de 86g"*
+- *"Quantas calorias tem uma tapioca com queijo?"* 
+- *"Me dê informações nutricionais de um pão francês com manteiga"*
+
+O ChatGPT automaticamente descobrirá e usará sua ferramenta NutriAI! 🎉
+
+---
+
+## 🧠 Como funciona
+
+**Fluxo de funcionamento:**
+
+1. **ChatGPT Apps SDK** → Detecta intenção nutricional do usuário
+2. **Protocolo MCP** → Chama a tool `analyze_food` via JSON-RPC 2.0  
+3. **NutriAI Server** → Processa descrição do alimento
+4. **OpenAI API** → Gera estimativa nutricional usando GPT-4o-mini
+5. **ChatGPT** → Exibe resultado formatado com insights personalizados
+
+**Arquitetura técnica:**
+- **Frontend:** React com Vite (para desenvolvimento local)
+- **Backend:** FastAPI com protocolo MCP + rate limiting + monitoramento de custos
+- **IA:** OpenAI GPT-4o-mini com JSON mode para consistência
+- **Deploy:** Render.com com HTTPS automático
+- **Segurança:** CORS restrito + API keys opcionais + rate limitingenAI Apps SDK](https://img.shields.io/badge/OpenAI-Apps%20SDK-412991)](https://developers.openai.com/apps-sdk)  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)  
 [![Made with Python](https://img.shields.io/badge/Made%20with-Python-blue.svg)](https://www.python.org/)  
 [![Made with React](https://img.shields.io/badge/Frontend-React-61DAFB.svg)](https://react.dev/)
@@ -106,19 +147,39 @@ O NutriAI não coleta informações pessoais.
 Veja a política de privacidade completa
 .
 
-📚 Roadmap
+---
 
- Design Guidelines
+## �️ **Proteções e Monitoramento**
 
- Schema JSON (MCP Server)
+### **Segurança implementada:**
+- ✅ **Rate Limiting:** 5 req/min para MCP tools, 10 req/min para API REST
+- ✅ **CORS restrito:** Apenas ChatGPT e origens autorizadas
+- ✅ **API Keys opcionais:** Configure via variáveis de ambiente no Render
+- ✅ **Monitoramento de custos:** Logs mostram gasto por requisição (~$0.0003 por análise)
+- ✅ **Health checks:** Endpoint `/health` para monitoramento
 
- Componente React básico
+### **Configuração no Render.com:**
+```bash
+# Variáveis de ambiente recomendadas
+OPENAI_API_KEY=sua_chave_openai
+API_KEYS=chave_secreta_1,chave_secreta_2  # Opcional mas recomendado  
+ALLOWED_ORIGINS=https://chat.openai.com,https://chatgpt.com
+```
 
- Integração OpenAI API
+---
 
- Validação por imagem (versão futura)
+## �📚 Roadmap
 
- Comparação de alimentos
+- ✅ **Design Guidelines** 
+- ✅ **Schema JSON (MCP Server)**
+- ✅ **Protocolo MCP compatível com ChatGPT Apps SDK**
+- ✅ **Integração OpenAI API** 
+- ✅ **Deploy em produção (Render.com)**
+- ✅ **Rate limiting e proteções de segurança**
+- 🔄 **Validação por imagem** (versão futura)
+- 🔄 **Comparação entre alimentos**
+- 🔄 **Histórico pessoal de análises**
+- 🔄 **Integração com bases de dados nutricionais (USDA)**
 
 🤝 Contribuição
 
